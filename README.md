@@ -42,61 +42,45 @@ while (i < articleCount):
 Далее скрипт formatate.py форматирует все тексты удаляя из них стоп-слова(слова, что встречаются почти во всех текстах и не несут смысловой нагрузки), также применяется к словам стеммиг по алгоритму Портера.
 ```python
 import re
+import os
+import stemmer
 
-class Porter:
-	PERFECTIVEGROUND =  re.compile(u"((ив|ивши|ившись|ыв|ывши|ывшись)|((?<=[ая])(в|вши|вшись)))$")
-	REFLEXIVE = re.compile(u"(с[яь])$")
-	ADJECTIVE = re.compile(u"(ее|ие|ые|ое|ими|ыми|ей|ий|ый|ой|ем|им|ым|ом|его|ого|ему|ому|их|ых|ую|юю|ая|яя|ою|ею)$")
-	PARTICIPLE = re.compile(u"((ивш|ывш|ующ)|((?<=[ая])(ем|нн|вш|ющ|щ)))$")
-	VERB = re.compile(u"((ила|ыла|ена|ейте|уйте|ите|или|ыли|ей|уй|ил|ыл|им|ым|ен|ило|ыло|ено|ят|ует|уют|ит|ыт|ены|ить|ыть|ишь|ую|ю)|((?<=[ая])(ла|на|ете|йте|ли|й|л|ем|н|ло|но|ет|ют|ны|ть|ешь|нно)))$")
-	NOUN = re.compile(u"(а|ев|ов|ие|ье|е|иями|ями|ами|еи|ии|и|ией|ей|ой|ий|й|иям|ям|ием|ем|ам|ом|о|у|ах|иях|ях|ы|ь|ию|ью|ю|ия|ья|я)$")
-	RVRE = re.compile(u"^(.*?[аеиоуыэюя])(.*)$")
-	DERIVATIONAL = re.compile(u".*[^аеиоуыэюя]+[аеиоуыэюя].*ость?$")
-	DER = re.compile(u"ость?$")
-	SUPERLATIVE = re.compile(u"(ейше|ейш)$")
-	I = re.compile(u"и$")
-	P = re.compile(u"ь$")
-	NN = re.compile(u"нн$")
+loadpath = 'F:\\LDA\\news\\'
+savepath = 'F:\\LDA\\formatatednews\\'
+items = os.listdir(loadpath)
 
-	def stem(word):
-		word = word.lower()
-		word = word.replace(u'ё', u'е')
-		m = re.match(Porter.RVRE, word)
-		if m is None:
-			return word
-		if m.groups():
-			pre = m.group(1)
-			rv = m.group(2)
-			temp = Porter.PERFECTIVEGROUND.sub('', rv, 1)
-			if temp == rv:
-				rv = Porter.REFLEXIVE.sub('', rv, 1)
-				temp = Porter.ADJECTIVE.sub('', rv, 1)
-				if temp != rv:
-					rv = temp
-					rv = Porter.PARTICIPLE.sub('', rv, 1)
-				else:
-					temp = Porter.VERB.sub('', rv, 1)
-					if temp == rv:
-						rv = Porter.NOUN.sub('', rv, 1)
-					else:
-						rv = temp
-			else:
-				rv = temp
-			
-			rv = Porter.I.sub('', rv, 1)
+f = open('F:\\LDA\\stopwords.txt')
+stopwords = f.read().split()
 
-			if re.match(Porter.DERIVATIONAL, rv):
-				rv = Porter.DER.sub('', rv, 1)
+def is_stopword(word):
+	return word in stopwords
 
-			temp = Porter.P.sub('', rv, 1)
-			if temp == rv:
-				rv = Porter.SUPERLATIVE.sub('', rv, 1)
-				rv = Porter.NN.sub(u'н', rv, 1)
-			else:
-				rv = temp
-			word = pre+rv
-		return word
-	stem=staticmethod(stem)
+newlist = []
+for name in items:
+    if name.endswith(".txt"):
+        newlist.append(name)
+
+for file in newlist:
+	f = open(loadpath + file, 'r')
+	text = f.read()
+	f.close()
+	text = removelinks(text)
+	for char in "~\`1234567890-=+!@#$%^&*”“–—»«‘’©„(){}[]:;\'\"|\\<>?/.,":  
+		text = text.replace(char,'') 
+	wordlist = text.split()
+	
+	stems = []
+	for word in wordlist:
+		if word.isdigit() or is_stopword(word):
+			wordlist.remove(word)
+		word = stemmer.Porter.stem(word)
+		if not (len(word) < 2 or is_stopword(word)):
+			stems.append(word)
+	
+	f = open(savepath + file, 'w+')
+	for word in stems:
+		f.write(word + '\n')
+	f.close()
 ```
 Далее скрипт createdict.py составляет словать для всех слов используемых уже отформатированными текстами. Из словоря исключаются слова что встречаются реже 20 раз и чаще 400.
 ```python
